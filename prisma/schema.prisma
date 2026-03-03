@@ -1,0 +1,461 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN_EMPRESA
+  VENDEDOR
+}
+
+enum SaleStatus {
+  PAID
+  PENDING
+  OVERDUE
+  CANCELED
+}
+
+enum SaleType {
+  CONTADO
+  CREDITO
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  QR
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  ADJUST
+}
+
+enum PurchaseStatus {
+  ORDERED
+  RECEIVED
+  CANCELED
+}
+
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String
+  nit          String?
+  phone        String?
+  email        String?
+  address      String?
+  isActive     Boolean  @default(true)
+  logoUrl      String?
+  primaryColor String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users              User[]
+  customers          Customer[]
+  productCategories  ProductCategory[]
+  suppliers          Supplier[]
+  products           Product[]
+  inventoryMovements InventoryMovement[]
+  purchases          Purchase[]
+  purchaseItems      PurchaseItem[]
+  sales              Sale[]
+  saleInstallments   SaleInstallment[]
+  saleItems          SaleItem[]
+  payments           Payment[]
+  collectionLogs     CollectionLog[]
+
+  @@index([isActive])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  tenantId     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant              Tenant?             @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdSales        Sale[]              @relation("CreatedSales")
+  createdSalesAudit   Sale[]              @relation("SaleCreatedBy")
+  updatedSalesAudit   Sale[]              @relation("SaleUpdatedBy")
+  deletedSalesAudit   Sale[]              @relation("SaleDeletedBy")
+  createdPayments     Payment[]           @relation("PaymentCreatedBy")
+  updatedPayments     Payment[]           @relation("PaymentUpdatedBy")
+  deletedPayments     Payment[]           @relation("PaymentDeletedBy")
+  createdInstallments SaleInstallment[]   @relation("InstallmentCreatedBy")
+  updatedInstallments SaleInstallment[]   @relation("InstallmentUpdatedBy")
+  inventoryMovements  InventoryMovement[]
+  collectionLogs      CollectionLog[]     @relation("CollectionLogCreatedBy")
+  createdCustomers    Customer[]          @relation("CustomerCreatedBy")
+  updatedCustomers    Customer[]          @relation("CustomerUpdatedBy")
+  deletedCustomers    Customer[]          @relation("CustomerDeletedBy")
+  createdProducts     Product[]           @relation("ProductCreatedBy")
+  updatedProducts     Product[]           @relation("ProductUpdatedBy")
+  deletedProducts     Product[]           @relation("ProductDeletedBy")
+  createdCategories   ProductCategory[]   @relation("ProductCategoryCreatedBy")
+  updatedCategories   ProductCategory[]   @relation("ProductCategoryUpdatedBy")
+  deletedCategories   ProductCategory[]   @relation("ProductCategoryDeletedBy")
+  createdSuppliers    Supplier[]          @relation("SupplierCreatedBy")
+  updatedSuppliers    Supplier[]          @relation("SupplierUpdatedBy")
+  deletedSuppliers    Supplier[]          @relation("SupplierDeletedBy")
+  createdPurchases    Purchase[]          @relation("PurchaseCreatedBy")
+  updatedPurchases    Purchase[]          @relation("PurchaseUpdatedBy")
+  deletedPurchases    Purchase[]          @relation("PurchaseDeletedBy")
+  createdPurchaseItems PurchaseItem[]     @relation("PurchaseItemCreatedBy")
+  updatedPurchaseItems PurchaseItem[]     @relation("PurchaseItemUpdatedBy")
+  deletedPurchaseItems PurchaseItem[]     @relation("PurchaseItemDeletedBy")
+
+  @@index([tenantId, role])
+  @@index([tenantId, isActive])
+}
+
+model Customer {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  firstName   String    @default("")
+  lastName    String    @default("")
+  nit         String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  isActive    Boolean   @default(true)
+  createdById String?
+  updatedById String?
+  deletedById String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy      User?           @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User?           @relation("CustomerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy      User?           @relation("CustomerDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  sales          Sale[]
+  collectionLogs CollectionLog[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
+  @@index([tenantId, isActive])
+  @@index([tenantId, deletedAt])
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  tenantId    String
+  categoryId  String?
+  name        String
+  sku         String?
+  cost        Decimal?  @db.Decimal(12, 2)
+  price       Decimal   @db.Decimal(12, 2)
+  stock       Int       @default(0)
+  stockMin    Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdById String?
+  updatedById String?
+  deletedById String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category           ProductCategory?    @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  createdBy          User?               @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy          User?               @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy          User?               @relation("ProductDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  inventoryMovements InventoryMovement[]
+  purchaseItems      PurchaseItem[]
+  saleItems          SaleItem[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([tenantId, sku])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, stock])
+}
+
+model ProductCategory {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  isActive    Boolean   @default(true)
+  createdById String?
+  updatedById String?
+  deletedById String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("ProductCategoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?     @relation("ProductCategoryUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy User?     @relation("ProductCategoryDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  products  Product[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([tenantId, name])
+  @@index([tenantId, isActive])
+  @@index([tenantId, deletedAt])
+}
+
+model InventoryMovement {
+  id        String                @id @default(cuid())
+  tenantId  String
+  productId String
+  userId    String
+  saleId    String?
+  type      InventoryMovementType
+  quantity  Int
+  reason    String
+  createdAt DateTime              @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sale    Sale?   @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, productId])
+  @@index([tenantId, createdAt])
+}
+
+model Supplier {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  nit         String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  isActive    Boolean   @default(true)
+  createdById String?
+  updatedById String?
+  deletedById String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy  User?      @relation("SupplierCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User?      @relation("SupplierUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy  User?      @relation("SupplierDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  purchases  Purchase[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([tenantId, name])
+  @@index([tenantId, isActive])
+  @@index([tenantId, deletedAt])
+}
+
+model Purchase {
+  id          String         @id @default(cuid())
+  tenantId    String
+  supplierId  String?
+  status      PurchaseStatus @default(ORDERED)
+  orderedAt   DateTime       @default(now())
+  expectedAt  DateTime?
+  receivedAt  DateTime?
+  total       Decimal        @db.Decimal(12, 2)
+  notes       String?
+  createdById String?
+  updatedById String?
+  deletedById String?
+  deletedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier   Supplier?     @relation(fields: [supplierId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  createdBy  User?         @relation("PurchaseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User?         @relation("PurchaseUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy  User?         @relation("PurchaseDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  items      PurchaseItem[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, supplierId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, deletedAt])
+}
+
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  tenantId   String
+  purchaseId String
+  productId  String
+  quantity   Int
+  unitCost   Decimal  @db.Decimal(12, 2)
+  subtotal   Decimal  @db.Decimal(12, 2)
+  createdById String?
+  updatedById String?
+  deletedById String?
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchase  Purchase @relation(fields: [purchaseId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product   Product  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  createdBy User?    @relation("PurchaseItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?    @relation("PurchaseItemUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy User?    @relation("PurchaseItemDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, purchaseId])
+  @@index([tenantId, productId])
+  @@index([tenantId, deletedAt])
+}
+
+model Sale {
+  id                       String     @id @default(cuid())
+  tenantId                 String
+  customerId               String?
+  sellerId                 String
+  saleType                 SaleType   @default(CONTADO)
+  installmentCount         Int?
+  installmentFrequencyDays Int?
+  firstInstallmentDate     DateTime?
+  total                    Decimal    @db.Decimal(12, 2)
+  balance                  Decimal    @db.Decimal(12, 2)
+  status                   SaleStatus @default(PENDING)
+  dueDate                  DateTime?
+  notes                    String?
+  createdById              String?
+  updatedById              String?
+  deletedById              String?
+  deletedAt                DateTime?
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer           Customer?           @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  seller             User                @relation("CreatedSales", fields: [sellerId], references: [id], onDelete: Restrict)
+  createdBy          User?               @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy          User?               @relation("SaleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy          User?               @relation("SaleDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  items              SaleItem[]
+  installments       SaleInstallment[]
+  payments           Payment[]
+  collectionLogs     CollectionLog[]
+  inventoryMovements InventoryMovement[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, deletedAt])
+}
+
+model SaleInstallment {
+  id                String            @id @default(cuid())
+  tenantId          String
+  saleId            String
+  installmentNumber Int
+  amount            Decimal           @db.Decimal(12, 2)
+  paidAmount        Decimal           @default(0) @db.Decimal(12, 2)
+  dueDate           DateTime
+  status            InstallmentStatus @default(PENDING)
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale      Sale   @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  createdBy User?  @relation("InstallmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?  @relation("InstallmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, saleId, installmentNumber])
+  @@index([tenantId, dueDate])
+  @@index([tenantId, status])
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  tenantId  String
+  saleId    String
+  productId String
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(12, 2)
+  subtotal  Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale    Sale    @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product Product @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, saleId])
+  @@index([tenantId, productId])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  tenantId    String
+  saleId      String
+  createdById String
+  updatedById String?
+  deletedById String?
+  deletedAt   DateTime?
+  amount      Decimal       @db.Decimal(12, 2)
+  method      PaymentMethod
+  note        String?
+  paidAt      DateTime
+  createdAt   DateTime      @default(now())
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale      Sale   @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  createdBy User   @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User?  @relation("PaymentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy User?  @relation("PaymentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, saleId])
+  @@index([tenantId, paidAt])
+  @@index([tenantId, deletedAt])
+}
+
+model CollectionLog {
+  id            String    @id @default(cuid())
+  tenantId      String
+  saleId        String
+  customerId    String?
+  createdById   String
+  comment       String
+  nextContactAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale      Sale      @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  customer  Customer? @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  createdBy User      @relation("CollectionLogCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, saleId])
+  @@index([tenantId, nextContactAt])
+}
