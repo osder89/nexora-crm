@@ -1,16 +1,14 @@
 ﻿import type { SessionUser } from "@/services/auth/session.server";
 
-export const BACKEND_API_URL = process.env.BACKEND_API_URL ?? "http://localhost:4300/api";
-
 export type BackendRequestQuery = URLSearchParams | Record<string, string | number | boolean | null | undefined>;
 
-export function buildBackendUrl(path: string, query?: BackendRequestQuery) {
-  const basePath = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(`${BACKEND_API_URL}${basePath}`);
+export function buildApiPath(path: string, query?: BackendRequestQuery) {
+  const basePath = path.startsWith("/api") ? path : path.startsWith("/") ? `/api${path}` : `/api/${path}`;
+  const url = new URL(basePath, "http://internal.local");
 
   if (query instanceof URLSearchParams) {
     url.search = query.toString();
-    return url.toString();
+    return `${url.pathname}${url.search}`;
   }
 
   if (query) {
@@ -23,7 +21,12 @@ export function buildBackendUrl(path: string, query?: BackendRequestQuery) {
     }
   }
 
-  return url.toString();
+  return `${url.pathname}${url.search}`;
+}
+
+export function buildServerApiUrl(path: string, query?: BackendRequestQuery) {
+  const port = resolveInternalPort();
+  return new URL(buildApiPath(path, query), `http://127.0.0.1:${port}`).toString();
 }
 
 export function buildActorHeaders(user: SessionUser | null) {
@@ -39,3 +42,19 @@ export function buildActorHeaders(user: SessionUser | null) {
   };
 }
 
+function resolveInternalPort() {
+  const directPort = process.env.PORT?.trim();
+
+  if (directPort) {
+    return directPort;
+  }
+
+  if (process.env.NEXTAUTH_URL) {
+    const nextAuthUrl = new URL(process.env.NEXTAUTH_URL);
+    if (nextAuthUrl.port) {
+      return nextAuthUrl.port;
+    }
+  }
+
+  return "4200";
+}

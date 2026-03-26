@@ -1,4 +1,5 @@
-﻿import { BackendApiError, getResponseCode, getResponseMessage, parseBackendResponse } from "@/services/backend/error";
+﻿import { buildApiPath } from "@/services/backend/shared";
+import { BackendApiError, getResponseCode, getResponseMessage, parseBackendResponse } from "@/services/backend/error";
 
 type ClientBackendRequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -7,7 +8,7 @@ type ClientBackendRequestOptions = {
 };
 
 export async function clientBackendRequest<T>(path: string, options: ClientBackendRequestOptions = {}) {
-  const url = buildClientUrl(path, options.query);
+  const url = buildApiPath(path, options.query);
   const headers = new Headers({
     Accept: "application/json",
   });
@@ -37,25 +38,3 @@ export async function clientBackendRequest<T>(path: string, options: ClientBacke
 
   return data as T;
 }
-
-function buildClientUrl(path: string, query?: ClientBackendRequestOptions["query"]) {
-  const url = new URL(path.startsWith("/") ? `/api/backend${path}` : `/api/backend/${path}`, "http://localhost");
-
-  if (query instanceof URLSearchParams) {
-    url.search = query.toString();
-    return `${url.pathname}${url.search}`;
-  }
-
-  if (query) {
-    for (const [key, value] of Object.entries(query)) {
-      if (value === undefined || value === null || value === "") {
-        continue;
-      }
-
-      url.searchParams.set(key, String(value));
-    }
-  }
-
-  return `${url.pathname}${url.search}`;
-}
-

@@ -1,10 +1,27 @@
-import "dotenv/config";
+﻿import "dotenv/config";
+
+import next from "next";
 
 import { createServerApp } from "@/server/app";
 
-const port = Number.parseInt(process.env.SERVER_PORT ?? "4300", 10);
-const app = createServerApp();
+const port = Number.parseInt(process.env.PORT ?? "4200", 10);
+const host = process.env.HOST ?? "0.0.0.0";
+const dev = process.env.NODE_ENV === "production" ? false : process.env.npm_lifecycle_event !== "start";
 
-app.listen(port, () => {
-  console.log(`Nexora backend escuchando en http://localhost:${port}`);
+async function start() {
+  const nextApp = next({ dev, hostname: host, port });
+  const nextHandler = nextApp.getRequestHandler();
+
+  await nextApp.prepare();
+
+  const app = createServerApp((req, res) => nextHandler(req, res));
+
+  app.listen(port, host, () => {
+    console.log(`Nexora unificado escuchando en http://${host}:${port}`);
+  });
+}
+
+start().catch((error) => {
+  console.error("No se pudo iniciar Nexora.", error);
+  process.exit(1);
 });

@@ -2,7 +2,7 @@
 
 import { type SessionUser, getPageSessionUser } from "@/services/auth/session.server";
 import { BackendApiError, getResponseCode, getResponseMessage, parseBackendResponse } from "@/services/backend/error";
-import { type BackendRequestQuery, buildActorHeaders, buildBackendUrl } from "@/services/backend/shared";
+import { type BackendRequestQuery, buildActorHeaders, buildServerApiUrl } from "@/services/backend/shared";
 
 type ServerBackendRequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -17,11 +17,16 @@ export async function serverBackendRequest<T>(
   options: ServerBackendRequestOptions = {},
 ) {
   const user = options.user === undefined ? await getPageSessionUser(context) : options.user;
-  const url = buildBackendUrl(path, options.query);
+  const url = buildServerApiUrl(path, options.query);
   const headers = new Headers({
     Accept: "application/json",
     ...buildActorHeaders(user),
   });
+  const cookieHeader = context.req.headers.cookie;
+
+  if (cookieHeader) {
+    headers.set("cookie", cookieHeader);
+  }
 
   const init: RequestInit = {
     method: options.method ?? "GET",
@@ -49,4 +54,3 @@ export async function serverBackendRequest<T>(
 
   return data as T;
 }
-
