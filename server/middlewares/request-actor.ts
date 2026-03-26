@@ -1,7 +1,8 @@
-import { Role } from "@prisma/client";
+﻿import { Role } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
 import { getToken } from "next-auth/jwt";
 
+import { resolveAuthSecret } from "@/services/auth/env";
 import type { AppActor } from "@/server/types/actor";
 
 export async function attachRequestActor(req: Request, _res: Response, next: NextFunction) {
@@ -36,7 +37,7 @@ async function resolveActorFromNextAuth(req: Request): Promise<AppActor | null> 
   try {
     const token = await getToken({
       req: req as Parameters<typeof getToken>[0]["req"],
-      secret: process.env.NEXTAUTH_SECRET,
+      secret: resolveAuthSecret() ?? undefined,
     });
 
     const role = normalizeRole(typeof token?.role === "string" ? token.role : null);

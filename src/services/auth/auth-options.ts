@@ -5,11 +5,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { Role } from "@prisma/client";
 
 import { prisma } from "@/server/repositories/prisma";
+import { hydrateAuthEnvironment } from "@/services/auth/env";
 import { buildLoginThrottleKey, clearFailedLogins, isLoginBlocked, registerFailedLogin } from "@/services/auth/login-throttle";
 import { SESSION_MAX_AGE_SECONDS } from "@/services/auth/session-policy";
 
+const { authSecret } = hydrateAuthEnvironment();
+
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: authSecret ?? undefined,
   session: {
     strategy: "jwt",
     maxAge: SESSION_MAX_AGE_SECONDS,

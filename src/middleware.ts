@@ -3,9 +3,10 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 import { resolveProtectedRouteRedirect } from "@/features/auth/route-access";
+import { resolveAuthSecret } from "@/services/auth/env";
 
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret: resolveAuthSecret() ?? undefined });
   const { pathname } = req.nextUrl;
 
   if (!token?.sub || !token.role) {

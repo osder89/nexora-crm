@@ -1,4 +1,5 @@
 ﻿import type { SessionUser } from "@/services/auth/session.server";
+import { resolveAuthBaseUrl } from "@/services/auth/env";
 
 export type BackendRequestQuery = URLSearchParams | Record<string, string | number | boolean | null | undefined>;
 
@@ -49,8 +50,10 @@ function resolveInternalPort() {
     return directPort;
   }
 
-  if (process.env.NEXTAUTH_URL) {
-    const nextAuthUrl = new URL(process.env.NEXTAUTH_URL);
+  const authBaseUrl = resolveAuthBaseUrl();
+
+  if (authBaseUrl) {
+    const nextAuthUrl = new URL(authBaseUrl);
     if (nextAuthUrl.port) {
       return nextAuthUrl.port;
     }
