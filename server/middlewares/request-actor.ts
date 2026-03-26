@@ -2,7 +2,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { getToken } from "next-auth/jwt";
 
-import { resolveAuthSecret } from "@/services/auth/env";
+import { resolveAuthSecret, resolveSecureCookiePreference } from "@/services/auth/env";
 import type { AppActor } from "@/server/types/actor";
 
 export async function attachRequestActor(req: Request, _res: Response, next: NextFunction) {
@@ -38,6 +38,7 @@ async function resolveActorFromNextAuth(req: Request): Promise<AppActor | null> 
     const token = await getToken({
       req: req as Parameters<typeof getToken>[0]["req"],
       secret: resolveAuthSecret() ?? undefined,
+      secureCookie: resolveSecureCookiePreference(req.header("x-forwarded-proto") ?? (req.secure ? "https" : req.protocol)),
     });
 
     const role = normalizeRole(typeof token?.role === "string" ? token.role : null);

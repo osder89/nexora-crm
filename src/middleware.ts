@@ -3,10 +3,14 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 import { resolveProtectedRouteRedirect } from "@/features/auth/route-access";
-import { resolveAuthSecret } from "@/services/auth/env";
+import { resolveAuthSecret, resolveSecureCookiePreference } from "@/services/auth/env";
 
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: resolveAuthSecret() ?? undefined });
+  const token = await getToken({
+    req,
+    secret: resolveAuthSecret() ?? undefined,
+    secureCookie: resolveSecureCookiePreference(req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol),
+  });
   const { pathname } = req.nextUrl;
 
   if (!token?.sub || !token.role) {
