@@ -3,8 +3,22 @@
   return value ? value : null;
 }
 
+function resolveHostedUrl(name: string) {
+  const value = readEnv(name);
+
+  if (!value) {
+    return null;
+  }
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+
+  return `https://${value}`;
+}
+
 export function resolveAuthBaseUrl() {
-  return readEnv("NEXTAUTH_URL") ?? readEnv("RENDER_EXTERNAL_URL");
+  return readEnv("NEXTAUTH_URL") ?? resolveHostedUrl("VERCEL_URL") ?? readEnv("RENDER_EXTERNAL_URL");
 }
 
 export function resolveAuthSecret() {

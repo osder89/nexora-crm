@@ -17,7 +17,7 @@ export async function serverBackendRequest<T>(
   options: ServerBackendRequestOptions = {},
 ) {
   const user = options.user === undefined ? await getPageSessionUser(context) : options.user;
-  const url = buildServerApiUrl(path, options.query);
+  const url = buildServerApiUrl(context.req.headers, path, options.query);
   const headers = new Headers({
     Accept: "application/json",
     ...buildActorHeaders(user),
